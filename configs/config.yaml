@@ -1,0 +1,54 @@
+check_prop: 0.01
+epochs: 100
+model_class: vit
+model_name: vit_ddp
+data_name: cifar100
+model_save_path: ./checkpoints/${data_name}
+
+dataset:
+  root: ./data
+  download: true
+
+dataloader:
+  train:
+    batch_size: 32
+    shuffle: false
+    num_workers: 1
+  
+  val:
+    batch_size: 128
+    shuffle: false
+    num_workers: 1
+
+ddp:
+  kwargs:
+    nprocs: 3
+    join: true
+
+wandb:
+  do: false
+  kwargs:
+    project: Deep-Learning-for-NLP
+    name: ${data_name}/${model_name}
+
+early_stopping:
+  val_key: val accuracy
+  tolerance: 5
+  higher_better: true
+
+model:
+  vit_kwargs:
+    in_channels: 3
+    hidden_channels: 128
+    expansion: 2
+    num_classes: 100
+    image_size: 224
+    patch_size: 16
+    num_heads: 8
+    num_blocks: 3
+    dropout: 0.1
+  loss_kwargs: {}
+  val_loss_kwargs: {}
+
+optimizer:
+  lr: 0.001
