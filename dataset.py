@@ -37,7 +37,7 @@ class StockNetDataset(Dataset):
 
             tweets: np.ndarray = np.load(txt_fname)  # (~ x 1+3+768)
             keywords = pd.read_parquet(kw_fname)  # (~ x 2)
-            prices = pd.read_parquet(price_fname)  # (~ x 7)  #! check
+            prices = pd.read_parquet(price_fname)  # (~ x 7)
             tweets, keywords, prices, tweet_dates, price_dates = self.process_stock_data(tweets, keywords, prices)
 
             data_num = price_dates.shape[0] - window_size - forecast_size + 1
@@ -80,7 +80,8 @@ class StockNetDataset(Dataset):
                 ).input_ids[0]  # (n_words)
 
                 # price processing
-                price_input = price_target[:window_size]
+                # price_input = price_target[:window_size]
+                price_input = price_target[:window_size, [1, -1]]  # (T x 2)
                 price_target = price_target[window_size:, 1]  # (forecast_size)
 
                 # append
@@ -92,18 +93,9 @@ class StockNetDataset(Dataset):
     def process_stock_data(self, tweets: np.ndarray, keywords: pd.DataFrame, prices: pd.DataFrame):
         tweet_dates: np.ndarray[tuple[int], int]
         tweet_dates = tweets[:, 0].astype(int)
-        start_date = max(tweet_dates.min(), prices.date.min())
-        end_date = min(tweet_dates.max(), prices.date.max())
 
         # slice data by available dates
-        tweets = tweets[(tweet_dates >= start_date) & (tweet_dates <= end_date), :]
-        keywords = keywords.loc[(keywords.date >= start_date) & (keywords.date <= end_date), :]
-        prices = prices.loc[(prices.date >= start_date) & (prices.date <= end_date), :]
-
-        tweet_dates = tweets[:, 0].astype(int)
-
-        # # further processing for dates
-        both_dates = set(tweet_dates.tolist()).intersection(prices.date.tolist())
+        both_dates = set(tweet_dates.tolist()).intersection(set(prices.date.tolist()))
         tweets = tweets[pd.Series(tweet_dates).isin(both_dates), :]
         keywords = keywords.loc[keywords.date.isin(both_dates), "keywords"].reset_index(drop=True)
         prices = prices.loc[prices.date.isin(both_dates), :]
@@ -118,7 +110,7 @@ class StockNetDataset(Dataset):
         keywords: pd.Series
         prices: Tensor
         tweets = torch.FloatTensor(tweets[:, 1:])  # (~ x 3+768)
-        prices = torch.FloatTensor(prices[:, 1:])  # (~ x 7)  #! check
+        prices = torch.FloatTensor(prices[:, 1:])  # (~ x 6)
 
         return tweets, keywords, prices, tweet_dates, price_dates
 
@@ -146,4 +138,5 @@ if __name__ == "__main__":
     config: DictConfig
     config = OmegaConf.load("./configs/config.yaml")
     dataset = StockNetDataset("test", config.dataset)
+    print(len(dataset))  # 1689
     # just for code availability, so "test" is selected to be fast

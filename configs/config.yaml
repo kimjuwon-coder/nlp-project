@@ -1,8 +1,10 @@
 check_prop: 0.01
-epochs: 100
-model_class: vit
-model_name: vit_ddp
-data_name: cifar100
+epochs: 200
+device: cuda:4
+model_name: pre-ours-setting1  # TODO
+# setting1: General Attention + Multihead Attention
+# forecasting
+data_name: stocknet
 model_save_path: ./checkpoints/${data_name}
 
 dataset:
@@ -13,14 +15,16 @@ dataset:
 
 dataloader:
   train:
-    batch_size: 256
-    shuffle: false
+    batch_size: 64
+    shuffle: true
     num_workers: 1
+    pin_memory: true
   
   val:
     batch_size: 512
     shuffle: false
     num_workers: 1
+    pin_memory: true
 
 ddp:
   kwargs:
@@ -34,23 +38,41 @@ wandb:
     name: ${data_name}/${model_name}
 
 early_stopping:
-  val_key: val accuracy
-  tolerance: 5
-  higher_better: true
+  val_key: val loss
+  tolerance: 20
+  higher_better: false
 
 model:
-  vit_kwargs:
-    in_channels: 3
-    hidden_channels: 128
-    expansion: 2
-    num_classes: 100
-    image_size: 224
-    patch_size: 16
-    num_heads: 8
-    num_blocks: 3
-    dropout: 0.1
+  forecast_size: ${dataset.forecast_size}
+  ts_feature_num: 2
+  embed_dim: 768
+  hidden_dim: 256
+  roberta_pretrained_path: cardiffnlp/twitter-roberta-base-sentiment-latest
+  dropout: 0.1
+
   loss_kwargs: {}
-  val_loss_kwargs: {}
+  val_loss_kwargs:
+    reduction: sum
+
+  dlinear:
+    seq_len: ${dataset.window_size}
+    pred_len: ${dataset.forecast_size}
+    individual: true
+    enc_in: ${model.ts_feature_num}
+
+  aggregater:
+    kind: general
+    query_dim: ${model.hidden_dim}
+    key_dim: ${model.hidden_dim}
+    dropout: ${model.dropout}
+    weight_kind: tanh
+
+  context_keyword_attention:
+    kind: multihead
+    embed_dim: ${model.hidden_dim}
+    num_heads: 4
+    dropout: ${model.dropout}
+    weight_kind: softmax
 
 optimizer:
-  lr: 0.001
+  lr: 0.0001

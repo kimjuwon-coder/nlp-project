@@ -2,13 +2,14 @@ from statistics import mean
 from typing import Type
 
 import torch
-import wandb
 from omegaconf import DictConfig, OmegaConf
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
-from models import BaseModel
+import wandb
+from dataset import StockNetDataset
+from models import BaseModel, MyModel
 from tools import EarlyStopping, pbar_finish, val_loop
 
 
@@ -60,8 +61,10 @@ def train(
     val_loader = DataLoader(val_set, **config.dataloader.val)
     early_stopping = EarlyStopping(**config.early_stopping)
     check_unit = int(len(train_loader) * config.check_prop)
+    assert check_unit != 0, "check_unit is 0. Please look into `len(train_loader)`, and `check_prop`."
 
-    model = model(**config.model).to(config.device)
+    model: BaseModel
+    model = model(config.model).to(config.device)
     optimizer = torch.optim.Adam(model.parameters(), **config.optimizer)
 
     for epoch in range(config.epochs):
@@ -79,9 +82,18 @@ def train(
         if improved is True:
             torch.save(
                 model.state_dict(),
-                f"{config.model_save_path}/{config.model_name}_epoch{epoch:2d}.pth",
+                f"{config.model_save_path}/{config.model_name}.pth",
             )
 
     if config.wandb.do is True:
         run.finish()
     return
+
+
+if __name__ == "__main__":
+    model_type = MyModel
+    config = OmegaConf.load("./configs/config.yaml")
+    train_set = StockNetDataset("train", config.dataset)
+    val_set = StockNetDataset("val", config.dataset)
+    print("All settings are done. Start training.\n")
+    train(model_type, config, train_set, val_set)
