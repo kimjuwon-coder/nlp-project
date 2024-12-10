@@ -66,6 +66,7 @@ def train(
     model: BaseModel
     model = model(config.model).to(config.device)
     optimizer = torch.optim.Adam(model.parameters(), **config.optimizer)
+    print()
 
     for epoch in range(config.epochs):
         pbar, train_metrics = train_loop(model, train_loader, optimizer, epoch, check_unit)

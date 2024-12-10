@@ -1,30 +1,11 @@
 check_prop: 0.01
 epochs: 200
 device: cuda:4
-model_name: pre-ours-setting1  # TODO
+model_name: ours-setting1-beta  # TODO
 # setting1: General Attention + Multihead Attention
 # forecasting
 data_name: stocknet
 model_save_path: ./checkpoints/${data_name}
-
-dataset:
-  window_size: 60
-  forecast_size: 10
-  max_sents: 30
-  max_words: 30
-
-dataloader:
-  train:
-    batch_size: 64
-    shuffle: true
-    num_workers: 1
-    pin_memory: true
-  
-  val:
-    batch_size: 512
-    shuffle: false
-    num_workers: 1
-    pin_memory: true
 
 ddp:
   kwargs:
@@ -37,10 +18,35 @@ wandb:
     project: nlp-project
     name: ${data_name}/${model_name}
 
+dataset:
+  window_size: 60
+  forecast_size: 10
+  max_sents: 5
+  max_words: 20
+
+dataloader:
+  train:
+    batch_size: 128
+    shuffle: true
+    num_workers: 1
+    pin_memory: true
+  
+  val:
+    batch_size: 512
+    shuffle: false
+    num_workers: 1
+    pin_memory: true
+  
+  test:
+    batch_size: 512
+    shuffle: false
+    num_workers: 1
+    pin_memory: true
+
 early_stopping:
-  val_key: val loss
+  val_key: val acc
   tolerance: 20
-  higher_better: false
+  higher_better: true
 
 model:
   forecast_size: ${dataset.forecast_size}
@@ -75,4 +81,4 @@ model:
     weight_kind: softmax
 
 optimizer:
-  lr: 0.0001
+  lr: 0.001

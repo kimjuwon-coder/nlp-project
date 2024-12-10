@@ -110,7 +110,8 @@ class Aggregater(nn.Module):
 
 class MyModel(BaseModel):
     train_keys: tuple[str] = ("loss",)
-    val_keys: tuple[str] = ("loss", "mae")
+    # val_keys: tuple[str] = ("loss", "mae")
+    val_keys: tuple[str] = ("loss", "acc")
 
     def __init__(self, config):
         super().__init__()
@@ -149,12 +150,15 @@ class MyModel(BaseModel):
             nn.Linear(config.hidden_dim, config.hidden_dim),
             nn.ReLU(),
             nn.Dropout(config.dropout),
-            nn.Linear(config.hidden_dim, config.forecast_size),
+            # nn.Linear(config.hidden_dim, config.forecast_size),
+            nn.Linear(config.hidden_dim, 1),
         )
         self.dropout = nn.Dropout(config.dropout)
 
-        self.criterion = nn.MSELoss(**config.loss_kwargs)
-        self.val_criterion = nn.MSELoss(**config.val_loss_kwargs)
+        # self.criterion = nn.MSELoss(**config.loss_kwargs)
+        # self.val_criterion = nn.MSELoss(**config.val_loss_kwargs)
+        self.criterion = nn.BCEWithLogitsLoss(**config.loss_kwargs)
+        self.val_criterion = nn.BCEWithLogitsLoss(**config.val_loss_kwargs)
         return
 
     def get_output(
@@ -202,6 +206,7 @@ class MyModel(BaseModel):
         # step 4: feed forward network
         output = output.squeeze(1)  # (-1 x d_embed)
         output = self.final_ffn(output)  # (-1 x H)
+        output = output.squeeze(1)  # (-1)
 
         return output, sent_attention, kw_attention
 
@@ -225,6 +230,8 @@ class MyModel(BaseModel):
         output, _, _ = self.get_output(input_ts, input_text, input_kw)
         loss = self.val_criterion(output, target)
         loss = loss.item()
-        mae = (output - target).abs().sum().item()
+        # mae = (output - target).abs().sum().item()
+        mae = (output > 0).int() == target
+        mae = mae.sum().item()
 
         return dict(zip(self.val_keys, (loss, mae)))

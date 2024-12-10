@@ -46,7 +46,7 @@ class EarlyStopping:
 
 
 @torch.no_grad()
-def val_loop(model: BaseModel, val_loader: DataLoader) -> dict[str, float]:
+def val_loop(model: BaseModel, val_loader: DataLoader, kind="val") -> dict[str, float]:
     device = next(model.parameters()).device
     val_metrics = {key: [] for key in model.val_keys}
     dataset_len = len(val_loader.dataset)
@@ -61,9 +61,7 @@ def val_loop(model: BaseModel, val_loader: DataLoader) -> dict[str, float]:
             val_metrics[key].append(val)
             # val: reduction `sum` applied
 
-    val_metrics = {
-        f"val {key}": sum(results) / dataset_len for key, results in val_metrics.items()
-    }
+    val_metrics = {f"{kind} {key}": sum(results) / dataset_len for key, results in val_metrics.items()}
 
     return val_metrics
 
@@ -87,10 +85,7 @@ def test(model: BaseModel, test_loader: DataLoader) -> dict[str, float]:
         for key, val in test_metrics.items():
             test_metrics[key] = val
 
-    test_metrics = {
-        f"test {key}": sum(results) / dataset_len
-        for key, results in test_metrics.items()
-    }
+    test_metrics = {f"test {key}": sum(results) / dataset_len for key, results in test_metrics.items()}
 
     # example for Time Series
     # outputs = torch.cat(outputs, dim=0)

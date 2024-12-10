@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 from omegaconf import DictConfig, OmegaConf
 from torch import Tensor
-from torch.utils.data import Dataset
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from transformers import RobertaTokenizer
 
@@ -16,7 +16,7 @@ class StockNetDataset(Dataset):
     def __init__(self, kind, config):
         super().__init__()
         tokenizer = RobertaTokenizer.from_pretrained("cardiffnlp/twitter-roberta-base-sentiment-latest")
-        tokenizer.model_max_length = 30
+        tokenizer.model_max_length = config.max_words
         random.seed(42)
 
         window_size = config.window_size  # 60
@@ -83,6 +83,8 @@ class StockNetDataset(Dataset):
                 # price_input = price_target[:window_size]
                 price_input = price_target[:window_size, [1, -1]]  # (T x 2)
                 price_target = price_target[window_size:, 1]  # (forecast_size)
+                price_target = price_target.mean() >= price_input[:, 0].mean()
+                price_target = price_target.float()
 
                 # append
                 self.data.append((price_input, txt, kws, price_target))
@@ -118,12 +120,17 @@ class StockNetDataset(Dataset):
         scores = txt[:, :3]  # (~ x 3)
         txt = txt[:, 3:]  # (~ x 768)
         values, labels = scores.max(1)  # (~), (~)
-        mask = ~labels.eq(0)  # pick only positive and negative
+        mask = ~labels.eq(1)  # pick only positive and negative
 
         txt = txt[mask]  # (~ x 768)
         values = values[mask]
-        _, indices = values.topk(k=self.max_sents, dim=0)
-        txt = txt[indices]  # (max_sents x 768)
+        sent_num = mask.sum().item()
+        if sent_num < self.max_sents:
+            print(sent_num)
+
+        else:
+            _, indices = values.topk(k=self.max_sents, dim=0)
+            txt = txt[indices]  # (max_sents x 768)
         return txt
 
     def __len__(self):
@@ -137,6 +144,10 @@ class StockNetDataset(Dataset):
 if __name__ == "__main__":
     config: DictConfig
     config = OmegaConf.load("./configs/config.yaml")
-    dataset = StockNetDataset("test", config.dataset)
-    print(len(dataset))  # 1689
-    # just for code availability, so "test" is selected to be fast
+    for kind in ("train", "val", "test"):
+        dataset = StockNetDataset(kind, config.dataset)
+        print(len(dataset))  # 1689
+
+        loader = DataLoader(dataset, **config.dataloader.val)
+        for batch in loader:
+            pass
