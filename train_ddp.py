@@ -1,16 +1,16 @@
 import os
+from statistics import mean
 
 import torch
 import torch.multiprocessing as mp
-import wandb
 from omegaconf import DictConfig, OmegaConf
 from torch import Tensor, distributed
 from torch.nn.parallel import DistributedDataParallel as DDP  # noqa: N817
 from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.distributed import DistributedSampler
-from statistics import mean
 from tqdm import tqdm
 
+import wandb
 from models import BaseModel
 from tools import EarlyStopping, pbar_finish, val_loop
 

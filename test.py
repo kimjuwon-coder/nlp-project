@@ -1,3 +1,4 @@
+import argparse
 from typing import Type
 
 import torch
@@ -17,6 +18,7 @@ def test(model: Type[BaseModel], config: DictConfig, test_set: Dataset):
 
     model: BaseModel
     model = model(config.model).to(config.device)
+    model.load_state_dict(torch.load(config.model_save_path, weights_only=True))
     print()
 
     test_metrics = val_loop(model, test_loader, kind="test")
@@ -24,7 +26,11 @@ def test(model: Type[BaseModel], config: DictConfig, test_set: Dataset):
 
 
 if __name__ == "__main__":
-    config = OmegaConf.load("./configs/config.yaml")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-path", type=str, default="./configs/config.yaml")
+    args = parser.parse_args()
+
+    config = OmegaConf.load(args.config_path)
     test_set = StockNetDataset("test", config.dataset)
     test_metrics = test(MyModel, config, test_set)
     print(test_metrics)

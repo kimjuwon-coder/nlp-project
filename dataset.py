@@ -30,6 +30,9 @@ class StockNetDataset(Dataset):
         price_fnames = [fname for fname in price_fnames if "GMRE" not in fname]
         fnames = list(zip(txt_fnames, kw_fnames, price_fnames))
 
+        self.pos = 0  #! to be deleted
+        self.neg = 0  #! to be deleted
+
         self.data = []
         for txt_fname, kw_fname, price_fname in tqdm(fnames):
             stock_name = price_fname.split("/")[-1][:-8]
@@ -85,6 +88,11 @@ class StockNetDataset(Dataset):
                 price_target = price_target[window_size:, 1]  # (forecast_size)
                 price_target = price_target.mean() >= price_input[:, 0].mean()
                 price_target = price_target.float()
+
+                if int(price_target.item()) == 1:
+                    self.pos += 1
+                else:
+                    self.neg += 1
 
                 # append
                 self.data.append((price_input, txt, kws, price_target))
@@ -146,7 +154,8 @@ if __name__ == "__main__":
     config = OmegaConf.load("./configs/config.yaml")
     for kind in ("train", "val", "test"):
         dataset = StockNetDataset(kind, config.dataset)
-        print(len(dataset))  # 1689
+        pos_prop = dataset.pos / (dataset.pos + dataset.neg)
+        print(f"{pos_prop:5.1%}", len(dataset))  # 1689
 
         loader = DataLoader(dataset, **config.dataloader.val)
         for batch in loader:

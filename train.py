@@ -1,3 +1,4 @@
+import argparse
 from statistics import mean
 from typing import Type
 
@@ -83,7 +84,7 @@ def train(
         if improved is True:
             torch.save(
                 model.state_dict(),
-                f"{config.model_save_path}/{config.model_name}.pth",
+                config.model_save_path,
             )
 
     if config.wandb.do is True:
@@ -92,8 +93,12 @@ def train(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config-path", type=str, default="./configs/config.yaml")
+    args = parser.parse_args()
+
     model_type = MyModel
-    config = OmegaConf.load("./configs/config.yaml")
+    config = OmegaConf.load(args.config_path)
     train_set = StockNetDataset("train", config.dataset)
     val_set = StockNetDataset("val", config.dataset)
     print("All settings are done. Start training.\n")

@@ -1,11 +1,11 @@
 check_prop: 0.01
 epochs: 200
 device: cuda:4
-model_name: ours-setting1-beta  # TODO
+model_name: binary-general-multihead
 # setting1: General Attention + Multihead Attention
 # forecasting
 data_name: stocknet
-model_save_path: ./checkpoints/${data_name}
+model_save_path: ./checkpoints/${data_name}/${model_name}.pt
 
 ddp:
   kwargs:
